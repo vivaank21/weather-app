@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WeatherPro | Professional Weather Intelligence</title>
+  <title>WeatherPro | Live Weather Report</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,41 +21,50 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    :root {
-      --glass-bg: rgba(255, 255, 255, 0.15);
-      --glass-border: rgba(255, 255, 255, 0.25);
-    }
-
     body {
-      transition: background 0.4s, color 0.4s;
+      transition: background 0.3s, color 0.3s;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-
     .glass {
-      background: var(--glass-bg);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-
+    .glass:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
     canvas#three-bg {
       position: fixed;
       inset: 0;
       z-index: -1;
     }
-
-    .loader {
-      width: 48px;
-      height: 48px;
-      border: 5px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: auto;
+    .search-container {
+      max-width: 500px;
+      margin: 0 auto;
     }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .btn-custom {
+      border-radius: 25px;
+      padding: 10px 20px;
+      font-weight: bold;
+    }
+    .weather-card {
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    @media (max-width: 768px) {
+      .glass {
+        margin-bottom: 20px;
+      }
+      .search-container {
+        max-width: 100%;
+        padding: 0 15px;
+      }
     }
   </style>
 </head>
@@ -66,137 +75,225 @@
   <canvas id="three-bg"></canvas>
 
   <!-- Header -->
-  <header class="container-fluid px-4 py-4 flex flex-wrap justify-between items-center glass sticky top-0 z-50">
-    <div class="flex items-center gap-3">
-      <h1 class="text-2xl font-bold">🌦️ WeatherPro</h1>
-      <span class="text-sm opacity-75">Professional Weather Intelligence</span>
-    </div>
-
-    <div class="flex flex-wrap gap-3 mt-3 sm:mt-0">
-      <input id="cityInput" class="form-control" placeholder="Enter city" />
-      <button id="searchBtn" class="btn btn-info">Search</button>
-      <button id="themeToggle" class="btn btn-outline-light">🌙</button>
-      <button id="downloadCSV" class="btn btn-outline-success">Export CSV</button>
-      <button id="newsBtn" class="btn btn-outline-warning">Weather News</button>
+  <header class="container-fluid px-4 py-4">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <h1 class="text-3xl font-bold mb-0">Weather Report</h1>
+        <p class="text-muted mt-1">Get real-time weather updates</p>
+      </div>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <div class="flex gap-3 justify-content-md-end justify-content-center flex-wrap">
+          <button id="themeToggle" class="btn btn-outline-light btn-custom">🌙</button>
+          <button id="downloadCSV" class="btn btn-outline-info btn-custom">Download CSV</button>
+          <!-- <button id="newsBtn" class="btn btn-outline-warning btn-custom">Live Weather News</button> -->
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Main -->
+  <!-- Search Section -->
+  <section class="container my-4">
+    <div class="search-container">
+      <div class="glass rounded-4 p-4">
+        <h4 class="text-center mb-3">Search Weather by City</h4>
+        <div class="input-group">
+          <input type="text" id="cityInput" class="form-control" placeholder="Enter city name (e.g., London)" value="Jamnagar">
+          <button id="searchBtn" class="btn btn-primary btn-custom">Search</button>
+        </div>
+        <p id="errorMsg" class="text-danger mt-2 text-center" style="display: none;">City not found. Please try again.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Section -->
   <main class="container my-5">
+    <div class="row g-4 justify-content-center">
 
-    <div id="loader" class="loader hidden"></div>
+      <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="glass rounded-4 p-4 text-center weather-card">
+          <h5>Temperature</h5>
+          <p id="temp" class="text-4xl font-bold">-- °C</p>
+          <small class="text-muted">Feels like</small>
+        </div>
+      </div>
 
-    <div class="row g-4" id="cards">
-      <div class="col-md-3"><div class="glass rounded-4 p-4 text-center"><h6>Temperature</h6><p id="temp" class="text-3xl font-bold">-- °C</p></div></div>
-      <div class="col-md-3"><div class="glass rounded-4 p-4 text-center"><h6>Humidity</h6><p id="humidity" class="text-3xl font-bold">-- %</p></div></div>
-      <div class="col-md-3"><div class="glass rounded-4 p-4 text-center"><h6>Wind Speed</h6><p id="wind" class="text-3xl font-bold">-- km/h</p></div></div>
-      <div class="col-md-3"><div class="glass rounded-4 p-4 text-center"><h6>Condition</h6><p id="condition" class="text-2xl font-semibold">--</p></div></div>
+      <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="glass rounded-4 p-4 text-center weather-card">
+          <h5>Humidity</h5>
+          <p id="humidity" class="text-4xl font-bold">-- %</p>
+          <small class="text-muted">Relative humidity</small>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="glass rounded-4 p-4 text-center weather-card">
+          <h5>Wind Speed</h5>
+          <p id="wind" class="text-4xl font-bold">-- km/h</p>
+          <small class="text-muted">Wind direction</small>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="glass rounded-4 p-4 text-center weather-card">
+          <h5>Condition</h5>
+          <p id="condition" class="text-2xl font-semibold">--</p>
+          <small class="text-muted">Weather status</small>
+        </div>
+      </div>
     </div>
 
-    <div class="text-center mt-5 flex justify-center gap-4 flex-wrap">
-      <button id="graphBtn" class="btn btn-primary">View Analytics</button>
-      <button id="historyBtn" class="btn btn-secondary">History & Download</button>
+    <div class="text-center mt-5">
+      <div class="d-flex justify-content-center gap-4 flex-wrap">
+        <button id="graphBtn" class="btn btn-success btn-custom">Generate Graph</button>
+        <button id="historyBtn" class="btn btn-secondary btn-custom">Weather History</button>
+      </div>
     </div>
 
-    <div class="mt-5 glass p-4 rounded-4">
-      <canvas id="weatherChart"></canvas>
+    <div class="mt-5 d-none" id="chartContainer">
+      <div class="glass rounded-4 p-4">
+        <canvas id="weatherChart"></canvas>
+      </div>
     </div>
   </main>
 
   <!-- Footer -->
   <footer class="text-center py-4 opacity-75">
-    © 2026 WeatherPro · Designed for Professional Use
+    © 2026 WeatherPro • Powered by OpenWeatherMap API
   </footer>
 
   <script>
-    const API_KEY = "YOUR_API_KEY";
+    const API_KEY = "511b674fbf8c6c2ffcb2787ecd3b1552"; // Replace with your OpenWeatherMap API key
+    let currentCity = "Jamnagar";
     let history = JSON.parse(localStorage.getItem("weatherHistory")) || [];
 
-    const loader = document.getElementById("loader");
-
     async function fetchWeather(city) {
-      loader.classList.remove("hidden");
-      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}`);
-      const data = await res.json();
-      loader.classList.add("hidden");
+      try {
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}`);
+        if (!res.ok) throw new Error("City not found");
+        const data = await res.json();
 
-      const record = {
-        temp: data.main.temp,
-        humidity: data.main.humidity,
-        wind: data.wind.speed,
-        condition: data.weather[0].main,
-        time: new Date().toLocaleString()
-      };
+        const record = {
+          temp: data.main.temp,
+          humidity: data.main.humidity,
+          wind: data.wind.speed,
+          condition: data.weather[0].main,
+          time: new Date().toLocaleString(),
+          city: city
+        };
 
-      history.push(record);
-      localStorage.setItem("weatherHistory", JSON.stringify(history));
+        history.push(record);
+        localStorage.setItem("weatherHistory", JSON.stringify(history));
 
-      temp.innerText = record.temp + " °C";
-      humidity.innerText = record.humidity + " %";
-      wind.innerText = record.wind + " km/h";
-      condition.innerText = record.condition;
+        document.getElementById("temp").innerText = record.temp + " °C";
+        document.getElementById("humidity").innerText = record.humidity + " %";
+        document.getElementById("wind").innerText = record.wind + " km/h";
+        document.getElementById("condition").innerText = record.condition;
+        document.getElementById("errorMsg").style.display = "none";
 
-      gsap.from(".glass", { opacity: 0, y: 30, stagger: 0.1 });
+        gsap.from('.weather-card', {opacity:0, y:30, stagger:0.1, duration: 0.5});
+      } catch (error) {
+        document.getElementById("errorMsg").style.display = "block";
+        console.error(error);
+      }
     }
 
+    // Initial load
+    fetchWeather(currentCity);
+
     document.getElementById("searchBtn").onclick = () => {
-      const city = document.getElementById("cityInput").value || "Delhi";
-      fetchWeather(city);
+      const city = document.getElementById("cityInput").value.trim();
+      if (city) {
+        currentCity = city;
+        fetchWeather(city);
+      }
     };
+
+    // Allow Enter key to search
+    document.getElementById("cityInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("searchBtn").click();
+      }
+    });
 
     document.getElementById("themeToggle").onclick = () => {
       document.body.classList.toggle("bg-white");
       document.body.classList.toggle("text-black");
+      document.body.classList.toggle("bg-slate-900");
+      document.body.classList.toggle("text-white");
     };
 
     document.getElementById("downloadCSV").onclick = () => {
-      let csv = "Temp,Humidity,Wind,Condition,Time\n";
-      history.forEach(h => csv += `${h.temp},${h.humidity},${h.wind},${h.condition},${h.time}\n`);
+      let csv = "City,Temp,Humidity,Wind,Condition,Time\n";
+      history.forEach(h => csv += `${h.city},${h.temp},${h.humidity},${h.wind},${h.condition},${h.time}\n`);
       const blob = new Blob([csv], { type: "text/csv" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "weather_history.csv";
+      a.download = "weather_data.csv";
       a.click();
     };
 
     document.getElementById("graphBtn").onclick = () => {
-      new Chart(document.getElementById("weatherChart"), {
+      const container = document.getElementById("chartContainer");
+      container.classList.remove("d-none");
+      const ctx = document.getElementById('weatherChart');
+      new Chart(ctx, {
         type: 'line',
         data: {
           labels: history.map(h => h.time),
-          datasets: [
-            { label: 'Temperature (°C)', data: history.map(h => h.temp), tension: 0.4 },
-            { label: 'Humidity (%)', data: history.map(h => h.humidity), tension: 0.4 }
-          ]
+          datasets: [{
+            label: 'Temperature °C',
+            data: history.map(h => h.temp),
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            title: {
+              display: true,
+              text: 'Temperature History'
+            }
+          }
         }
       });
+      gsap.from('#chartContainer', {opacity:0, scale:0.9, duration: 0.5});
     };
 
     document.getElementById("historyBtn").onclick = () => {
-      alert(`Total Records Stored: ${history.length}`);
+      alert(`Stored Records: ${history.length}\nLast City: ${currentCity}`);
     };
 
-    // Three.js background
+    // Three.js animated background
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-bg'), alpha:true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    const geometry = new THREE.IcosahedronGeometry(1.2, 1);
-    const material = new THREE.MeshBasicMaterial({ wireframe: true });
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+    const geometry = new THREE.SphereGeometry(1, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ wireframe: true, color: 0x00ffff });
+    const sphere = new THREE.Mesh(geometry, material);
+    scene.add(sphere);
     camera.position.z = 3;
 
     function animate() {
       requestAnimationFrame(animate);
-      mesh.rotation.x += 0.002;
-      mesh.rotation.y += 0.003;
+      sphere.rotation.x += 0.002;
+      sphere.rotation.y += 0.003;
       renderer.render(scene, camera);
     }
     animate();
 
-    fetchWeather("Delhi");
+    // Resize handler for Three.js
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
